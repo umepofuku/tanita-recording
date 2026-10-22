@@ -1,0 +1,333 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>体組成ログ</title>
+<style>
+:root{--bg:#eaf0f4;--panel:#fff;--ink:#16232e;--sub:#586b7a;--rule:#d3dce3;--blue:#2b6cb6;--onblue:#fff;--lcd:#cbd0bf;--lcdink:#252921;--warn:#b0402b;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f161c;--panel:#17212a;--ink:#e5ecf1;--sub:#93a6b3;--rule:#2a3844;--blue:#6ea8e6;--onblue:#0c1925;--lcd:#aab09e;--lcdink:#1b1e17;--warn:#ec8570}}
+:root[data-theme="dark"]{--bg:#0f161c;--panel:#17212a;--ink:#e5ecf1;--sub:#93a6b3;--rule:#2a3844;--blue:#6ea8e6;--onblue:#0c1925;--lcd:#aab09e;--lcdink:#1b1e17;--warn:#ec8570}
+html{scroll-padding-top:env(safe-area-inset-top,0px);background:var(--bg)}
+:root{color-scheme:light dark}
+:root[data-theme="light"]{color-scheme:light}
+:root[data-theme="dark"]{color-scheme:dark}
+*,*::before,*::after{box-sizing:inherit}
+[hidden]{display:none!important}
+fieldset{border:0;margin:0;padding:0;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 "Hiragino Sans","Hiragino Kaku Gothic ProN","Noto Sans JP","Yu Gothic",system-ui,sans-serif}
+.wrap{max-width:560px;margin:0 auto;padding:18px 16px 40px}
+h1{font-size:22px;margin:0 0 14px;letter-spacing:.02em}
+h2{font-size:17px;margin:0 0 10px}
+section{border-top:1px solid var(--rule);margin-top:26px;padding-top:18px}
+.plate{background:var(--blue);padding:10px;border-radius:18px}
+.lcd{background:var(--lcd);color:var(--lcdink);border-radius:8px;padding:12px 16px 10px;box-shadow:inset 0 2px 7px rgba(0,0,0,.3);min-height:132px;display:flex;flex-direction:column;justify-content:space-between}
+.lcd-top{display:flex;justify-content:space-between;font-size:14px}
+.lcd-val{font:300 68px/1.05 "Helvetica Neue",Arial,sans-serif;font-variant-numeric:tabular-nums;letter-spacing:.02em}
+.lcd-val small{font-size:18px;margin-left:6px;letter-spacing:0}
+.lcd-bot{font-size:14px}
+.chips{display:flex;gap:8px;overflow-x:auto;padding:14px 0 6px;-webkit-overflow-scrolling:touch}
+.chip,.rng{flex:none;border:1px solid var(--rule);background:var(--panel);color:var(--ink);border-radius:999px;padding:6px 14px;font:inherit;font-size:14px;cursor:pointer}
+.chip[aria-pressed="true"],.rng[aria-pressed="true"]{background:var(--blue);border-color:var(--blue);color:var(--onblue)}
+.chart svg{display:block;width:100%;height:auto}
+.chart .grid{stroke:var(--rule);stroke-width:1}
+.chart .ln{fill:none;stroke:var(--blue);stroke-width:2.5;stroke-linejoin:round}
+.chart .dot{fill:var(--blue)}
+.chart .tx{fill:var(--sub);font-size:12px}
+.empty,.note{color:var(--sub);font-size:14px;margin:8px 0}
+.row{display:flex;flex-wrap:wrap;gap:10px;margin:0 0 6px}
+.btn{display:inline-block;border:1px solid var(--blue);background:var(--blue);color:var(--onblue);border-radius:10px;padding:10px 16px;font:inherit;font-size:15px;cursor:pointer;text-align:center}
+.btn.ghost{background:transparent;color:var(--blue)}
+.btn[disabled]{opacity:.5;cursor:default}
+.vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);opacity:0}
+.btn:focus-within,.btn:focus-visible,.chip:focus-visible,.rng:focus-visible,input:focus-visible,.rowbtn:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
+.status{min-height:1.6em;margin:6px 0;font-size:14px}
+.status.err{color:var(--warn)}
+.form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:10px 0 14px}
+.form label{display:block;font-size:13px;color:var(--sub)}
+.form .full{grid-column:1/-1}
+.form input{display:block;width:100%;min-width:0;margin-top:3px;padding:10px;border:1px solid var(--rule);border-radius:8px;background:var(--panel);color:var(--ink);font:inherit;font-size:16px}
+.hist{list-style:none;margin:0;padding:0}
+.hist li{display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--rule)}
+.rowbtn{flex:1;text-align:left;background:none;border:0;color:var(--ink);font:inherit;font-size:14px;padding:10px 0;cursor:pointer}
+.rowbtn b{font-weight:600;margin-right:10px}
+.del{background:none;border:0;color:var(--sub);font:inherit;font-size:13px;padding:8px;cursor:pointer}
+.del[data-armed="1"]{color:var(--warn);font-weight:600}
+.nw{white-space:nowrap}
+.ranges{padding-top:0}
+.cap{margin:2px 0 0;text-align:right}
+#readBox.busy label.btn{opacity:.5;pointer-events:none}
+.more{margin-top:12px}
+.form input[type=date],.form input[type=time]{-webkit-appearance:none;appearance:none;min-height:46px;text-align:left}
+.form input::-webkit-date-and-time-value{text-align:left}
+</style>
+</head>
+<body>
+<main class="wrap">
+<h1>体組成ログ</h1>
+<div class="plate"><div class="lcd" id="lcd" aria-live="polite"></div></div>
+<div class="chips" id="chips" role="group" aria-label="表示する項目"></div>
+<div class="chips ranges" id="ranges" role="group" aria-label="グラフの表示期間"></div>
+<div class="chart" id="chart"></div>
+
+<section>
+<h2>記録を追加</h2>
+<div id="readBox" hidden>
+<div class="row">
+<label class="btn">動画から読み取る<input class="vh" type="file" id="vid" accept="video/*"></label>
+<label class="btn ghost">写真から読み取る<input class="vh" type="file" id="pic" accept="image/*" multiple></label>
+<button class="btn ghost" id="cancelBtn" type="button" hidden>中止</button>
+</div>
+<p class="note">読み取った数値は下のフォームに入ります。確認・修正してから保存してください。動画や写真は保存されません。</p>
+</div>
+<p class="note" id="noRead" hidden>この環境では自動読み取りを使えません。数値は手入力で記録できます。</p>
+<p class="status" id="status" role="status"></p>
+<fieldset id="entry"><div class="form" id="form"></div>
+<button class="btn" id="saveBtn" type="button">保存</button></fieldset>
+</section>
+
+<section>
+<h2>履歴</h2>
+<ul class="hist" id="hist"></ul>
+<button class="btn ghost more" id="more" type="button" hidden></button>
+</section>
+
+<section>
+<h2>データ</h2>
+<div class="row">
+<button class="btn ghost" id="csvOut" type="button" hidden>CSVを書き出す</button>
+<label class="btn ghost">CSVを読み込む<input class="vh" type="file" id="csvIn" accept=".csv,text/csv"></label>
+</div>
+<p class="note">記録はこのブラウザ（この端末）の中だけに保存されます。ブラウザのデータを消すと失われるため、ときどきCSVで書き出してください。</p>
+</section>
+</main>
+
+<script>
+const $=id=>document.getElementById(id);
+const METRICS=[
+{k:'weight',n:'体重',u:'kg',d:2},{k:'bmi',n:'BMI',u:'',d:1},{k:'fat',n:'体脂肪率',u:'%',d:1},
+{k:'muscle',n:'筋肉量',u:'kg',d:2},{k:'bone',n:'推定骨量',u:'kg',d:1},{k:'visceral',n:'内臓脂肪',u:'レベル',d:1},
+{k:'bmr',n:'基礎代謝',u:'kcal/日',d:0},{k:'age',n:'体内年齢',u:'歳',d:0}
+];
+const RANGE={weight:[10,300],bmi:[8,80],fat:[2,70],muscle:[5,150],bone:[.3,10],visceral:[1,59],bmr:[300,5000],age:[10,99]};
+const KEY='taiso-log-v1', DATE=/^\d{4}-\d{2}-\d{2}$/, TIME=/^([01]?\d|2[0-3]):([0-5]\d)(?::[0-5]\d)?$/;
+let recs=[], cur='weight', rangeDays=90, histLimit=14, busy=false, ctl=null, sample=null, dl=null, imgLimits=null;
+
+const pad=n=>String(n).padStart(2,'0');
+const ymd=d=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+const hm=d=>pad(d.getHours())+':'+pad(d.getMinutes());
+const mOf=k=>METRICS.find(m=>m.k===k);
+const inRange=(k,v)=>v>=RANGE[k][0]&&v<=RANGE[k][1];
+const keyOf=r=>r.date+'|'+(r.time||'');
+const sortKey=r=>r.date+'T'+(r.time||'');
+const tsOf=r=>Date.parse(r.date+'T'+(r.time||'00:00')+':00');
+const fmt=(v,m)=>v==null?'--':v.toFixed(m.d);
+const shortDate=d=>d.slice(2).replace(/-/g,'/');
+const stamp=r=>shortDate(r.date)+(r.time?' '+r.time:'');
+function num(v){if(typeof v==='number')return Number.isFinite(v)?v:null;if(typeof v==='string'&&v.trim()!==''){const n=Number(v);return Number.isFinite(n)?n:null}return null}
+function numLoose(v){if(typeof v==='string'){const m=v.match(/-?\d+(?:\.\d+)?/);return m?num(m[0]):null}return num(v)}
+function validDate(s){if(typeof s!=='string'||!DATE.test(s))return false;const d=new Date(s+'T00:00:00');return !isNaN(d)&&ymd(d)===s}
+function normDate(s){const m=String(s).replace(/["'\s]/g,'').match(/^(\d{4})[-\/.年](\d{1,2})[-\/.月](\d{1,2})日?$/);if(!m)return null;const d=m[1]+'-'+pad(+m[2])+'-'+pad(+m[3]);return validDate(d)?d:null}
+function normTime(s){const m=String(s==null?'':s).replace(/["'\s]/g,'').match(TIME);return m?pad(+m[1])+':'+m[2]:null}
+
+function clean(r){if(!r||!validDate(r.date))return null;const o={date:r.date,time:normTime(r.time)};METRICS.forEach(m=>o[m.k]=num(r[m.k]));return o}
+function load(){try{const r=JSON.parse(localStorage.getItem(KEY)||'[]');recs=Array.isArray(r)?r.map(clean).filter(Boolean):[]}catch(e){recs=[]}}
+function persist(){try{localStorage.setItem(KEY,JSON.stringify(recs));return true}catch(e){return false}}
+function upsert(rec){const i=recs.findIndex(x=>keyOf(x)===keyOf(rec));if(i>=0)recs[i]=rec;else recs.push(rec);recs.sort((a,b)=>sortKey(a)<sortKey(b)?-1:1)}
+function setStatus(t,err){const s=$('status');s.textContent=t||'';s.className='status'+(err?' err':'')}
+
+function buildChips(){$('chips').innerHTML=METRICS.map(m=>`<button class="chip" data-k="${m.k}" aria-pressed="${m.k===cur}">${m.n}</button>`).join('')}
+const RANGES=[{k:30,n:'30日'},{k:90,n:'90日'},{k:365,n:'1年'},{k:0,n:'全期間'}];
+function buildRanges(){$('ranges').innerHTML=RANGES.map(r=>`<button class="rng" data-r="${r.k}" aria-pressed="${r.k===rangeDays}">${r.n}</button>`).join('')}
+function syncRanges(){document.querySelectorAll('.rng').forEach(b=>b.setAttribute('aria-pressed',String(+b.dataset.r===rangeDays)))}
+function syncChips(){document.querySelectorAll('.chip').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.k===cur)))}
+function renderLcd(){
+  const m=mOf(cur), s=recs.filter(r=>r[cur]!=null), last=s[s.length-1], prev=s[s.length-2];
+  let bot='まだ記録がありません';
+  if(last&&prev){const d=last[cur]-prev[cur],a=Math.abs(d).toFixed(m.d);bot='前回比 '+(+a===0?'±':d>0?'+':'−')+a+(m.u&&m.u!=='レベル'?' '+m.u:'')}
+  else if(last)bot='記録 1件';
+  $('lcd').innerHTML=`<div class="lcd-top"><span>${m.n}</span><span>${last?stamp(last):''}</span></div><div class="lcd-val">${last?fmt(last[cur],m):'--'}<small>${m.u}</small></div><div class="lcd-bot">${bot}</div>`;
+}
+function renderChart(){
+  const m=mOf(cur), all=recs.filter(r=>r[cur]!=null), el=$('chart');
+  if(!all.length){el.innerHTML='<p class="empty">グラフは、記録が入るとここに表示されます。</p>';return}
+  const end=tsOf(all[all.length-1]), s=rangeDays?all.filter(r=>tsOf(r)>=end-rangeDays*864e5):all;
+  const cap=rangeDays?'直近'+RANGES.find(x=>x.k===rangeDays).n+'（'+s.length+'件／全'+all.length+'件）':'全期間（'+s.length+'件）';
+  const W=360,H=240,L=40,R=12,T=14,B=28, ts=s.map(tsOf), vs=s.map(r=>r[cur]);
+  let t0=Math.min(...ts), t1=Math.max(...ts); const span=t1-t0; if(t0===t1){t0-=2592e5;t1+=2592e5}
+  let v0=Math.min(...vs), v1=Math.max(...vs);
+  if(v0===v1){v0-=1;v1+=1}else{const p=(v1-v0)*.15;v0-=p;v1+=p}
+  const x=t=>L+(t-t0)/(t1-t0)*(W-L-R), y=v=>T+(1-(v-v0)/(v1-v0))*(H-T-B), dd=Math.min(m.d,1);
+  const lab=r=>shortDate(r.date)+(span<1728e5&&r.time?' '+r.time:'');
+  let g='';
+  [v0,(v0+v1)/2,v1].forEach(v=>{g+=`<line class="grid" x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}"/><text class="tx" x="${L-6}" y="${y(v)+4}" text-anchor="end">${v.toFixed(dd)}</text>`});
+  const pts=s.map((r,i)=>x(ts[i]).toFixed(1)+','+y(vs[i]).toFixed(1));
+  const dots=s.map((r,i)=>`<circle class="dot" cx="${x(ts[i]).toFixed(1)}" cy="${y(vs[i]).toFixed(1)}" r="${i===s.length-1?5:3.5}"/>`).join('');
+  const xl=s.length>1?`<text class="tx" x="${L}" y="${H-8}">${lab(s[0])}</text><text class="tx" x="${W-R}" y="${H-8}" text-anchor="end">${lab(s[s.length-1])}</text>`
+    :`<text class="tx" x="${W/2}" y="${H-8}" text-anchor="middle">${lab(s[0])}</text>`;
+  el.innerHTML=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${m.n}の推移グラフ">${g}<polyline class="ln" points="${pts.join(' ')}"/>${dots}${xl}</svg><p class="note cap">${cap}</p>`;
+}
+function renderHist(){
+  const h=$('hist'), more=$('more');
+  if(!recs.length){h.innerHTML='<li class="note">記録はまだありません。</li>';more.hidden=true;return}
+  const list=recs.slice().reverse(), shown=list.slice(0,histLimit), rest=list.length-shown.length;
+  h.innerHTML=shown.map(r=>`<li><button class="rowbtn" data-k="${keyOf(r)}"><b class="nw">${r.date}${r.time?' '+r.time:''}</b> <span class="nw">体重 ${fmt(r.weight,mOf('weight'))} kg</span> <span class="nw">体脂肪率 ${fmt(r.fat,mOf('fat'))} %</span></button><button class="del" data-k="${keyOf(r)}">削除</button></li>`).join('');
+  more.hidden=rest<=0;more.textContent='さらに表示（残り'+rest+'件）';
+}
+function renderAll(){syncChips();renderLcd();renderChart();renderHist()}
+
+function buildForm(){
+  $('form').innerHTML=`<label class="full">日付<input type="date" id="f_date"></label><label class="full">時刻<input type="time" id="f_time"></label>`+
+    METRICS.map(m=>`<label>${m.n}${m.u?'（'+m.u+'）':''}<input type="number" inputmode="decimal" step="any" id="f_${m.k}"></label>`).join('');
+  fillForm(null,ymd(new Date()),hm(new Date()));
+}
+function fillForm(o,date,time){
+  if(date!==undefined)$('f_date').value=date;
+  if(time!==undefined)$('f_time').value=time;
+  METRICS.forEach(m=>{$('f_'+m.k).value=o&&o[m.k]!=null?o[m.k]:''});
+}
+function readForm(){const rec={date:$('f_date').value,time:normTime($('f_time').value)};METRICS.forEach(m=>rec[m.k]=num($('f_'+m.k).value));return rec}
+
+$('chips').addEventListener('click',e=>{const b=e.target.closest('.chip');if(!b)return;cur=b.dataset.k;syncChips();renderLcd();renderChart()});
+$('saveBtn').addEventListener('click',()=>{
+  const rec=readForm();
+  if(!validDate(rec.date)){setStatus('日付を入力してください。',true);return}
+  if(!METRICS.some(m=>rec[m.k]!=null)){setStatus('数値を1つ以上入力してください。',true);return}
+  for(const m of METRICS){const v=rec[m.k];if(v!=null&&!inRange(m.k,v)){setStatus(`${m.n}は${RANGE[m.k][0]}〜${RANGE[m.k][1]}の範囲で入力してください（入力値: ${v}）。`,true);$('f_'+m.k).focus();return}}
+  const existed=recs.some(r=>keyOf(r)===keyOf(rec));
+  upsert(rec);const ok=persist();renderAll();fillForm(null,ymd(new Date()),hm(new Date()));
+  setStatus(ok?(existed?'同じ日時の記録を上書きしました。':'保存しました。'):'この環境ではブラウザ保存が使えません。このページを閉じると記録が消えるので、CSVを書き出してください。',!ok);
+});
+$('hist').addEventListener('click',e=>{
+  const del=e.target.closest('.del'), row=e.target.closest('.rowbtn');
+  if(del){
+    if(del.dataset.armed!=='1'){del.dataset.armed='1';del.textContent='もう一度押すと削除';setTimeout(()=>{del.dataset.armed='0';del.textContent='削除'},3000);return}
+    recs=recs.filter(r=>keyOf(r)!==del.dataset.k);persist();renderAll();return;
+  }
+  if(row){const r=recs.find(x=>keyOf(x)===row.dataset.k);if(r){fillForm(r,r.date,r.time||'');setStatus('この記録を読み込みました。「保存」で上書きされます。');$('form').scrollIntoView({behavior:'smooth',block:'center'})}}
+});
+$('ranges').addEventListener('click',e=>{const b=e.target.closest('.rng');if(!b)return;rangeDays=+b.dataset.r;syncRanges();renderChart()});
+$('more').addEventListener('click',()=>{histLimit+=30;renderHist()});
+
+/* CSV */
+function toCsv(){
+  const head=['日付','時刻',...METRICS.map(m=>m.n+(m.u?'('+m.u+')':''))];
+  const rows=recs.map(r=>[r.date,r.time||'',...METRICS.map(m=>r[m.k]==null?'':r[m.k])]);
+  return '\uFEFF'+[head,...rows].map(a=>a.join(',')).join('\r\n')+'\r\n';
+}
+function saveCsvLocal(){const u=URL.createObjectURL(new Blob([toCsv()],{type:'text/csv'})),a=document.createElement('a');a.href=u;a.download='taiso-log.csv';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),2000)}
+$('csvOut').addEventListener('click',async()=>{
+  if(!recs.length){setStatus('書き出す記録がありません。',true);return}
+  try{if(dl)await dl.save({filename:'taiso-log.csv',data:toCsv()});else saveCsvLocal();setStatus('CSVを書き出しました。')}
+  catch(e){setStatus('CSVを書き出せませんでした。',true)}
+});
+$('csvIn').addEventListener('change',async e=>{
+  const f=e.target.files[0];e.target.value='';if(!f)return;
+  try{
+    const cells=l=>l.split(',').map(s=>s.replace(/^\s*"?|"?\s*$/g,''));
+    const lines=(await f.text()).replace(/^\uFEFF/,'').split(/\r?\n/).filter(l=>l.trim());
+    let hdr=null;const rows=[];
+    lines.forEach(l=>{const c=cells(l);if(normDate(c[0]))rows.push(c);else if(!hdr&&/日付|date/i.test(c[0]))hdr=c});
+    const hasTime=hdr?hdr.some(x=>/時刻|time/i.test(x)):rows.some(c=>c[1]!==''&&normTime(c[1])!==null);
+    const off=hasTime?2:1;let n=0,bad=0,skipped=lines.length-rows.length-(hdr?1:0);
+    rows.forEach(c=>{
+      const rec={date:normDate(c[0]),time:hasTime?normTime(c[1]):null};
+      METRICS.forEach((m,i)=>{let v=num(c[i+off]===undefined?'':c[i+off]);if(v!=null&&!inRange(m.k,v)){bad++;v=null}rec[m.k]=v});
+      if(!METRICS.some(m=>rec[m.k]!=null)){skipped++;return}
+      const old=recs.find(r=>keyOf(r)===keyOf(rec));
+      if(old)METRICS.forEach(m=>{if(rec[m.k]==null)rec[m.k]=old[m.k]});
+      upsert(rec);n++;
+    });
+    persist();renderAll();
+    setStatus(n+'件を読み込みました。'+(skipped?'読み込めなかった行: '+skipped+'行。':'')+(bad?'範囲外の値を無視: '+bad+'個。':''),n===0);
+  }catch(err){setStatus('CSVを読み込めませんでした。',true)}
+});
+
+/* 読み取り */
+const PROMPT='添付画像は、体組成計（タニタ製）の液晶表示を動画から時間順に切り出したものです。液晶には項目名と数値が順番に表示されます。画像から確実に読み取れた項目だけを、JSONオブジェクト1つで返してください。見えない項目・読み取れない項目はnullにし、推測や補完はしないでください。キー: weight=体重(kg), bmi=BMI, fat=体脂肪率(%), muscle=筋肉量(kg), bone=推定骨量(kg), visceral=内臓脂肪レベル, bmr=基礎代謝(kcal/日), age=体内年齢(歳)。値は単位なしの数値のみ。JSON以外は出力しないでください。';
+function errMsg(c){
+  if(c==='not_granted')return 'Claudeの利用が許可されなかったため、読み取れませんでした。';
+  if(c==='rate_limited')return 'しばらく待ってから、もう一度お試しください。';
+  return '読み取りに失敗しました。手入力でも記録できます。';
+}
+async function frames(file,sig){
+  const url=URL.createObjectURL(file), v=document.createElement('video');
+  v.muted=true;v.playsInline=true;v.setAttribute('playsinline','');v.setAttribute('webkit-playsinline','');v.preload='auto';
+  v.style.cssText='position:fixed;left:0;top:0;width:2px;height:2px;opacity:0;pointer-events:none';
+  document.body.appendChild(v);
+  const info=()=>'形式='+(file.type||'不明')+' '+Math.round(file.size/1e6)+'MB, canPlay='+(v.canPlayType(file.type||'video/quicktime')||'no')+', readyState='+v.readyState+', error='+(v.error?v.error.code:'-');
+  const wait=(ev,ms)=>new Promise(r=>{const t=setTimeout(r,ms);v.addEventListener(ev,()=>{clearTimeout(t);r()},{once:true})});
+  try{
+    v.src=url;
+    await new Promise((ok,ng)=>{
+      const t=setTimeout(()=>ng(new Error('時間切れ: '+info())),15000);
+      const done=()=>{if(v.videoWidth&&v.readyState>=1){clearTimeout(t);ok()}};
+      ['loadedmetadata','loadeddata','canplay'].forEach(e=>v.addEventListener(e,done));
+      v.addEventListener('error',()=>{clearTimeout(t);ng(new Error('読み込みエラー: '+info()))});
+      v.load();done();
+    });
+    try{await Promise.race([v.play(),wait('error',2000)])}catch(e){}
+    v.pause();
+    const w=Math.min(720,v.videoWidth), h=Math.round(v.videoHeight*w/v.videoWidth);
+    const c=document.createElement('canvas');c.width=w;c.height=h;const g=c.getContext('2d'), out=[];
+    for(let t=0.5;t<v.duration&&out.length<40;t+=1.5){
+      if(sig.aborted)throw {code:'cancelled'};
+      const sk=wait('seeked',4000);v.currentTime=t;await sk;
+      if(v.readyState<2)await wait('loadeddata',2000);
+      g.drawImage(v,0,0,w,h);
+      out.push(await new Promise(r=>c.toBlob(r,'image/jpeg',0.85)));
+    }
+    return out.filter(Boolean);
+  }finally{v.removeAttribute('src');v.load();v.remove();URL.revokeObjectURL(url)}
+}
+function setBusy(on){busy=on;$('vid').disabled=on;$('pic').disabled=on;$('entry').disabled=on;$('cancelBtn').hidden=!on;$('readBox').classList.toggle('busy',on)}
+async function readFiles(files,isVideo){
+  if(busy||!files.length)return;
+  ctl=new AbortController();const sig=ctl.signal;setBusy(true);
+  try{await doRead(files,isVideo,sig)}
+  catch(e){if(sig.aborted||(e&&e.code==='cancelled'))setStatus('読み取りを中止しました。');else setStatus(errMsg(e&&e.code),true)}
+  finally{setBusy(false);ctl=null}
+}
+async function doRead(files,isVideo,sig){
+  const first=files[0];setStatus('準備中…');
+  let blobs;
+  try{blobs=isVideo?await frames(first,sig):Array.from(files).slice(0,24)}
+  catch(e){if(e&&e.code==='cancelled')throw e;setStatus('この動画をブラウザで開けませんでした（'+(e&&e.message||'原因不明')+'）。「写真から読み取る」か手入力をお試しください。',true);return}
+  const max=Math.max(1,imgLimits.maxCount||8), out={}, dropped=new Set();
+  for(let i=0;i<blobs.length;i+=max){
+    if(sig.aborted)throw {code:'cancelled'};
+    setStatus('読み取り中…（'+Math.min(i+max,blobs.length)+'/'+blobs.length+'枚）');
+    try{
+      const r=await sample.json(PROMPT,{images:blobs.slice(i,i+max),cache:false,signal:sig});
+      METRICS.forEach(m=>{const v=numLoose(r&&r[m.k]);if(v==null||out[m.k]!=null)return;if(inRange(m.k,v))out[m.k]=v;else dropped.add(m.n)});
+    }catch(e){
+      if(sig.aborted||(e&&e.code==='cancelled'))throw {code:'cancelled'};
+      setStatus(errMsg(e&&e.code),true);
+      if(e&&(e.code==='not_granted'||e.code==='rate_limited'))return;
+    }
+  }
+  const miss=METRICS.filter(m=>out[m.k]==null);
+  if(miss.length===METRICS.length){setStatus('数値を読み取れませんでした。液晶がはっきり写った動画・写真でお試しください。'+(dropped.size?'（範囲外のため無視: '+[...dropped].join('、')+'）':''),true);return}
+  const t=first.lastModified?new Date(first.lastModified):null;
+  fillForm(out,t?ymd(t):undefined,t?hm(t):undefined);
+  setStatus('フォームに入れました（日付と時刻はファイルの日時）。数値を確認して「保存」を押してください。'+(miss.length?'読み取れなかった項目: '+miss.map(m=>m.n).join('、')+'。':'')+(dropped.size?'範囲外のため無視した項目: '+[...dropped].join('、')+'。':''));
+}
+$('vid').addEventListener('change',e=>{const f=Array.from(e.target.files);e.target.value='';readFiles(f,true)});
+$('pic').addEventListener('change',e=>{const f=Array.from(e.target.files);e.target.value='';readFiles(f,false)});
+$('cancelBtn').addEventListener('click',()=>{if(ctl){setStatus('中止しています…');ctl.abort()}});
+
+/* 起動 */
+load();buildChips();buildRanges();buildForm();renderAll();
+(async()=>{
+  try{
+    if(window.claude&&claude.use){
+      [sample,dl]=await Promise.all([claude.use('sample'),claude.use('downloads')]);
+      if(sample){const l=await sample.limits().catch(()=>null);imgLimits=l&&l.images||null}
+    }
+  }catch(e){}
+  const can=!!(sample&&imgLimits);
+  $('readBox').hidden=!can;$('noRead').hidden=can;$('csvOut').hidden=!(dl||!(window.claude&&claude.use));
+})();
+</script>
+</body>
+</html>
